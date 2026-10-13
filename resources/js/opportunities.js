@@ -189,7 +189,8 @@ export function initOpportunities() {
         if (!state.resume) { openResumeUpload(); return; }
         submitApplication();
     });
-    document.querySelector('#continueJobApplicationFormBtn').addEventListener('click', () => {
+    // Submit or continue from the simplified application form
+    document.querySelector('#continueJobApplicationFormBtn')?.addEventListener('click', () => {
         const answer = document.querySelector('#applicationFormAnswer').value.trim();
         if (!answer) {
             toast('Complete the application form before continuing.');
@@ -202,6 +203,79 @@ export function initOpportunities() {
             return;
         }
         submitApplication();
+    });
+
+    // New full application form handler
+    document.querySelector('#jobApplicationForm')?.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const form = event.currentTarget;
+        // Basic client-side validation
+        const name = form.querySelector('#applicationName').value.trim();
+        const email = form.querySelector('#applicationEmail').value.trim();
+        const phone = form.querySelector('#applicationPhone').value.trim();
+        const location = form.querySelector('#applicationLocation').value.trim();
+        const experience = form.querySelector('#applicationExperience').value;
+        const employment = form.querySelector('#applicationEmployment').value;
+        const toolsField = document.querySelector('#applicationDesignToolsField');
+        const toolsChecked = [...form.querySelectorAll('input[name="design_tools[]"]:checked')].map((i) => i.value);
+        const resumeInput = form.querySelector('#applicationResume');
+        const cover = form.querySelector('#applicationCoverLetter').value.trim();
+        const response = form.querySelector('#applicationFormAnswer')?.value.trim();
+
+        if (!name || !email || !phone || !location || !experience || !employment) {
+            toast('Please complete the required fields.');
+            return;
+        }
+
+        // If this job's title suggests a design role, require at least one design tool
+        const requiresDesignTools = /design|designer|ui|ux/i.test(state.activeJob?.title || '');
+        if (requiresDesignTools && toolsChecked.length === 0) {
+            document.querySelector('#applicationDesignToolsError').hidden = false;
+            return;
+        }
+        document.querySelector('#applicationDesignToolsError').hidden = true;
+
+        // Build formData similar to submitApplication
+        const formData = new FormData();
+        formData.append('job_id', String(state.activeJob.id));
+        if (resumeInput && resumeInput.files && resumeInput.files[0]) {
+            const file = resumeInput.files[0];
+            if (!/\.(pdf|doc|docx)$/i.test(file.name)) { toast('Choose a PDF, DOC, or DOCX file.'); return; }
+            if (file.size > 4 * 1024 * 1024) { toast('Choose a resume smaller than 4 MB.'); return; }
+            formData.append('resume', file, file.name);
+        } else if (state.resume?.data) {
+            // attach saved resume
+            const responseBlob = await fetch(state.resume.data); const blob = await responseBlob.blob(); const file = new File([blob], state.resume.name || 'resume', { type: state.resume.type || blob.type || 'application/octet-stream' }); formData.append('resume', file, file.name);
+        } else {
+            toast('Attach a resume to submit your application.');
+            return;
+        }
+
+        formData.append('name', name);
+        formData.append('email', email);
+        formData.append('phone', phone);
+        formData.append('location', location);
+        formData.append('years_experience', experience);
+        formData.append('employment', employment);
+        if (toolsChecked.length) formData.append('design_tools', JSON.stringify(toolsChecked));
+        if (form.querySelector('#applicationPortfolio').value) formData.append('portfolio', form.querySelector('#applicationPortfolio').value.trim());
+        if (cover) formData.append('cover_letter', cover);
+        if (response) formData.append('response', response);
+
+        const submitBtn = form.querySelector('[type=submit]'); submitBtn.disabled = true; submitBtn.textContent = 'Submitting…';
+        try {
+            const payload = await authRequest('/applications', { method: 'POST', body: formData });
+            state.applications.unshift(payload.application);
+            persist();
+            document.querySelector('#jobApplicationFormModal').classList.add('hidden');
+            toast('Application submitted with your resume.');
+            show('profile');
+            window.dispatchEvent(new Event('applications:updated'));
+        } catch (error) {
+            toast(error.message);
+        } finally {
+            submitBtn.disabled = false; submitBtn.textContent = 'Submit application';
+        }
     });
     initResumeUpload();
     window.addEventListener('jobs:updated', renderJobs);
