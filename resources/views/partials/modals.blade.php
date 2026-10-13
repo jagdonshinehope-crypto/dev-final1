@@ -112,17 +112,66 @@
 <div class="modal hidden" id="resumeUploadModal">
     <div class="modal-card resume-upload-card">
         <button class="close-btn" data-close="resumeUploadModal" type="button">&times;</button>
-        <p class="tiny-label">APPLICATION REQUIREMENT</p>
-        <h3>Upload your resume</h3>
-        <p>Attach a resume before applying to <strong id="resumeJobTitle">this opportunity</strong>.</p>
-        <div class="resume-upload-box">
-            <div class="resume-file-icon">PDF</div>
-            <div><strong id="resumeUploadName">No file selected</strong><span>PDF, DOC, or DOCX · Maximum 4 MB</span></div></div>
-            <input id="jobResumeInput" type="file" accept=".pdf,.doc,.docx" hidden>
-            <button class="pill-btn pill-outline" id="chooseJobResumeBtn" type="button">Choose resume</button>
+        <h3>JOB APPLICATION</h3>
+        <p class="resume-application-position"><strong>Position:</strong> <span id="resumeJobTitle">this opportunity</span></p>
+        <p class="resume-required-note">Fields marked with * are required.</p>
+        <form id="resumeApplicationForm" class="account-form resume-application-form">
+            <section class="resume-application-section">
+                <h4>Personal Information</h4>
+                <div class="resume-application-fields">
+                    <label for="applicationFirstName">First Name *
+                        <input id="applicationFirstName" name="first_name" type="text" required maxlength="120" autocomplete="given-name">
+                    </label>
+                    <label for="applicationLastName">Last Name *
+                        <input id="applicationLastName" name="last_name" type="text" required maxlength="120" autocomplete="family-name">
+                    </label>
+                    <label for="applicationEmail">Email Address *
+                        <input id="applicationEmail" name="email" type="email" required maxlength="255" autocomplete="email">
+                    </label>
+                    <label for="applicationPhone">Phone Number *
+                        <input id="applicationPhone" name="phone" type="tel" required maxlength="40" autocomplete="tel">
+                    </label>
+                    <label class="resume-application-wide" for="applicationLocation">Current Location *
+                        <input id="applicationLocation" name="location" type="text" required maxlength="120" autocomplete="address-level2">
+                    </label>
+                </div>
+            </section>
+            <section class="resume-application-section">
+                <h4>Professional Information</h4>
+                <div class="resume-application-fields">
+                    <label class="resume-application-wide" for="applicationExperience">Years of Experience *
+                        <select id="applicationExperience" name="years_experience" required>
+                            <option value="">Select your experience</option>
+                            <option value="beginner">No experience / Beginner</option>
+                            <option value="less_than_1_year">Less than 1 year</option>
+                            <option value="1_2_years">1–2 years</option>
+                            <option value="3_5_years">3–5 years</option>
+                            <option value="more_than_5_years">More than 5 years</option>
+                        </select>
+                    </label>
+                    <label class="resume-application-wide" for="applicationSkills">Skills *
+                        <input id="applicationSkills" name="skills" type="text" required maxlength="500" placeholder="List your relevant skills">
+                    </label>
+                </div>
+            </section>
+            <section class="resume-application-section resume-application-resume">
+                <h4>Resume Upload *</h4>
+                <p>Accepted formats: PDF, DOC, or DOCX. Maximum file size: 4 MB.</p>
+                <div class="resume-upload-box">
+                    <div class="resume-file-icon" aria-hidden="true">PDF</div>
+                    <div><strong id="resumeUploadName" aria-live="polite">No file selected</strong><span>PDF, DOC, or DOCX · Maximum 4 MB</span></div>
+                </div>
+                <input id="jobResumeInput" name="resume" type="file" accept=".pdf,.doc,.docx" hidden>
+                <button class="pill-btn pill-outline" id="chooseJobResumeBtn" type="button">Choose resume</button>
+                <p class="resume-application-error" id="jobResumeError" role="alert" hidden></p>
+            </section>
             <div class="modal-actions">
-                <button class="pill-btn pill-dark" data-close="resumeUploadModal" type="button">Cancel</button>
-                <button class="pill-btn pill-orange" id="continueApplicationBtn" type="button" disabled>Continue application &rarr;</button></div></div></div>
+                <button class="pill-btn pill-outline" data-close="resumeUploadModal" type="button">Cancel</button>
+                <button class="pill-btn pill-orange" id="continueApplicationBtn" type="submit">Continue application &rarr;</button>
+            </div>
+        </form>
+    </div>
+</div>
 <div class="modal hidden" id="profileModal">
     <div class="modal-card">
         <button class="close-btn" data-close="profileModal" type="button">&times;</button>

@@ -56,6 +56,28 @@ class JobApplicationController extends Controller
             'resume' => ['required', 'file', 'mimes:pdf,doc,docx', 'extensions:pdf,doc,docx', 'max:4096'],
             'response' => ['nullable', 'string', 'max:2000'],
         ]);
+        $applicationDetailFields = [
+            'first_name',
+            'last_name',
+            'email',
+            'phone',
+            'location',
+            'years_experience',
+            'skills',
+        ];
+        $hasApplicationDetails = collect($applicationDetailFields)
+            ->contains(fn (string $field): bool => $request->exists($field));
+        if ($hasApplicationDetails) {
+            $data = array_merge($data, $request->validate([
+                'first_name' => ['required', 'string', 'max:120'],
+                'last_name' => ['required', 'string', 'max:120'],
+                'email' => ['required', 'email', 'max:255'],
+                'phone' => ['required', 'string', 'max:40'],
+                'location' => ['required', 'string', 'max:120'],
+                'years_experience' => ['required', 'in:beginner,less_than_1_year,1_2_years,3_5_years,more_than_5_years'],
+                'skills' => ['required', 'string', 'max:500'],
+            ]));
+        }
         $job = Job::findOrFail($data['job_id']);
         if ($job->client_id === $worker->id) {
             abort(403, 'You cannot apply to your own job.');
@@ -82,6 +104,13 @@ class JobApplicationController extends Controller
                 'resume_name' => $file->getClientOriginalName(),
                 'resume_mime' => $file->getMimeType() ?: 'application/octet-stream',
                 'response' => $data['response'] ?? null,
+                'first_name' => $data['first_name'] ?? null,
+                'last_name' => $data['last_name'] ?? null,
+                'email' => $data['email'] ?? null,
+                'phone' => $data['phone'] ?? null,
+                'location' => $data['location'] ?? null,
+                'years_experience' => $data['years_experience'] ?? null,
+                'skills' => $data['skills'] ?? null,
             ]);
         } catch (Throwable $exception) {
             Storage::disk('local')->delete($path);

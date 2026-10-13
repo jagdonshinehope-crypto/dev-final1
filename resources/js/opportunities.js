@@ -60,7 +60,7 @@ export function renderJobs() {
     document.querySelector('#jobGrid').innerHTML = filtered.length ? filtered.map((job) => `<article class="job-card"><div class="company-line"><span class="company-logo">${escapeHtml(job.company[0])}</span><span class="match">${escapeHtml(job.match)}% match</span></div><h3>${escapeHtml(job.title)}</h3><p>${escapeHtml(job.company)} · ${escapeHtml(job.place)} · ${escapeHtml(job.salary)}</p><div class="job-tags">${job.tags.map((tag) => `<span>${escapeHtml(tag)}</span>`).join('')}</div><button class="job-btn" data-job="${escapeHtml(job.id)}" type="button">View job post &rarr;</button></article>`).join('') : '<div class="no-results">No jobs match your filters.</div>';
 }
 
-async function submitApplication() {
+async function submitApplication(applicationDetails = null) {
     const job = state.activeJob;
     if (!job) {
         toast('Select an opportunity before applying.');
@@ -93,6 +93,9 @@ async function submitApplication() {
     formData.append('job_id', String(job.id));
     formData.append('resume', resumeFile, resumeFile.name);
     if (pendingApplicationAnswer) formData.append('response', pendingApplicationAnswer);
+    if (applicationDetails) {
+        Object.entries(applicationDetails).forEach(([key, value]) => formData.append(key, value));
+    }
     const submitButton = document.querySelector('#continueApplicationBtn');
     if (submitButton) submitButton.disabled = true;
     try {
@@ -117,7 +120,17 @@ function openResumeUpload() {
     document.querySelector('#jobModal').classList.add('hidden');
     document.querySelector('#resumeJobTitle').textContent = state.activeJob.title;
     document.querySelector('#resumeUploadName').textContent = 'No file selected';
-    document.querySelector('#continueApplicationBtn').disabled = true;
+    document.querySelector('#resumeApplicationForm').reset();
+    document.querySelector('#jobResumeInput').value = '';
+    document.querySelector('#jobResumeError').textContent = '';
+    document.querySelector('#jobResumeError').hidden = true;
+    const nameParts = (state.profile.name || state.user?.name || '').trim().split(/\s+/);
+    document.querySelector('#applicationFirstName').value = nameParts.shift() || '';
+    document.querySelector('#applicationLastName').value = nameParts.join(' ');
+    document.querySelector('#applicationEmail').value = state.user?.email || '';
+    document.querySelector('#applicationPhone').value = state.user?.contact_number || '';
+    document.querySelector('#applicationLocation').value = state.profile.birthplace || '';
+    document.querySelector('#applicationSkills').value = state.profile.skills || '';
     pendingResumeFile = null;
     document.querySelector('#resumeUploadModal').classList.remove('hidden');
 }
@@ -126,21 +139,56 @@ function initResumeUpload() {
     document.querySelector('#chooseJobResumeBtn').addEventListener('click', () => document.querySelector('#jobResumeInput').click());
     document.querySelector('#jobResumeInput').addEventListener('change', (event) => {
         const file = event.target.files?.[0];
+        const validationMessage = document.querySelector('#jobResumeError');
         if (!file) return;
-        if (!/\.(pdf|doc|docx)$/i.test(file.name)) { toast('Choose a PDF, DOC, or DOCX file.'); return; }
-        if (file.size > 4 * 1024 * 1024) { toast('Choose a resume smaller than 4 MB.'); return; }
+        if (!/\.(pdf|doc|docx)$/i.test(file.name)) {
+            pendingResumeFile = null;
+            event.target.value = '';
+            document.querySelector('#resumeUploadName').textContent = 'No file selected';
+            validationMessage.textContent = 'Choose a PDF, DOC, or DOCX file.';
+            validationMessage.hidden = false;
+            return;
+        }
+        if (file.size > 4 * 1024 * 1024) {
+            pendingResumeFile = null;
+            event.target.value = '';
+            document.querySelector('#resumeUploadName').textContent = 'No file selected';
+            validationMessage.textContent = 'The resume must be 4 MB or smaller.';
+            validationMessage.hidden = false;
+            return;
+        }
         pendingResumeFile = file;
         document.querySelector('#resumeUploadName').textContent = file.name;
-        document.querySelector('#continueApplicationBtn').disabled = false;
+        validationMessage.textContent = '';
+        validationMessage.hidden = true;
     });
-    document.querySelector('#continueApplicationBtn').addEventListener('click', () => {
-        if (!pendingResumeFile) return;
+    document.querySelector('#resumeApplicationForm').addEventListener('submit', (event) => {
+        event.preventDefault();
+        const form = event.currentTarget;
+        if (!form.reportValidity()) return;
+        if (!pendingResumeFile) {
+            const validationMessage = document.querySelector('#jobResumeError');
+            validationMessage.textContent = 'Choose a resume before continuing.';
+            validationMessage.hidden = false;
+            return;
+        }
+        const applicationDetails = {
+            first_name: document.querySelector('#applicationFirstName').value.trim(),
+            last_name: document.querySelector('#applicationLastName').value.trim(),
+            email: document.querySelector('#applicationEmail').value.trim(),
+            phone: document.querySelector('#applicationPhone').value.trim(),
+            location: document.querySelector('#applicationLocation').value.trim(),
+            years_experience: document.querySelector('#applicationExperience').value,
+            skills: document.querySelector('#applicationSkills').value.trim(),
+        };
+        const selectedFile = pendingResumeFile;
         const reader = new FileReader();
         reader.onload = () => {
-            state.resume = { name: pendingResumeFile.name, type: pendingResumeFile.type, size: pendingResumeFile.size, data: reader.result, updated: new Date().toLocaleDateString() };
+            state.resume = { name: selectedFile.name, type: selectedFile.type, size: selectedFile.size, data: reader.result, updated: new Date().toLocaleDateString() };
             persist();
-            submitApplication();
+            submitApplication(applicationDetails);
         };
+        reader.onerror = () => toast('The selected resume could not be read. Please choose it again.');
         reader.readAsDataURL(pendingResumeFile);
     });
 }

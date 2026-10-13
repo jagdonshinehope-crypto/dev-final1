@@ -97,6 +97,41 @@ class JobApplicationTest extends TestCase
         $this->assertSame(5, $application->fresh()->rating);
     }
 
+    public function test_worker_application_form_details_are_required_and_saved(): void
+    {
+        Storage::fake('local');
+        $client = User::factory()->create(['role' => 'client']);
+        $worker = User::factory()->create(['role' => 'worker']);
+        $job = $this->createJob($client);
+        $details = [
+            'first_name' => 'Alex',
+            'last_name' => 'Worker',
+            'email' => 'alex.worker@example.test',
+            'phone' => '+1 555 0100',
+            'location' => 'Portland',
+            'years_experience' => '1_2_years',
+            'skills' => 'Writing, research',
+        ];
+
+        $this->actingAs($worker)->postJson('/applications', [
+            'job_id' => $job->id,
+            'resume' => UploadedFile::fake()->create('resume.pdf', 40, 'application/pdf'),
+            ...array_diff_key($details, ['skills' => true]),
+        ])->assertUnprocessable()->assertJsonValidationErrors('skills');
+
+        $this->actingAs($worker)->postJson('/applications', [
+            'job_id' => $job->id,
+            'resume' => UploadedFile::fake()->create('resume.pdf', 40, 'application/pdf'),
+            ...$details,
+        ])->assertCreated();
+
+        $this->assertDatabaseHas('job_applications', [
+            'job_id' => $job->id,
+            'worker_id' => $worker->id,
+            ...$details,
+        ]);
+    }
+
     private function createJob(User $client, array $overrides = []): Job
     {
         return Job::create([

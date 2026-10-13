@@ -15,6 +15,13 @@ class JobApplication extends Model
         'resume_name',
         'resume_mime',
         'response',
+        'first_name',
+        'last_name',
+        'email',
+        'phone',
+        'location',
+        'years_experience',
+        'skills',
         'rating',
         'rating_comment',
     ];
